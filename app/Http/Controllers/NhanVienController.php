@@ -32,7 +32,6 @@ class NhanVienController extends Controller
             'email'         => $request->email,
             'ho_va_ten'     => $request->ho_va_ten,
             'password'      => bcrypt($request->password),
-            're_password'   => bcrypt($request->re_password),
             'so_dien_thoai' => $request->so_dien_thoai,
             'dia_chi'       => $request->dia_chi,
             'ngay_sinh'     => $request->ngay_sinh,
@@ -57,9 +56,6 @@ class NhanVienController extends Controller
         'tinh_trang'    => $request->tinh_trang,
         'id_chuc_vu'    => $request->id_chuc_vu
     ];
-    if ($request->password) {
-        $updateData['password'] = bcrypt($request->password);
-    }
     NhanVien::where('id', $request->id)->update($updateData);
 
     return response()->json([
@@ -92,8 +88,7 @@ class NhanVienController extends Controller
 
     public function dangNhap(Request $request)
     {
-        $user = NhanVien::where('email', $request->email)
-            ->where('password', $request->password)->first();
+        $user = NhanVien::where('email', $request->email)->first();
         if ($user && Hash::check($request->password, $user->password)) {
             return response()->json([
                 'status' => true,
@@ -173,7 +168,7 @@ class NhanVienController extends Controller
             $tieu_de = "Quên mật khẩu";
             $view = "quenMatKhau";
             $noi_dung['ho_va_ten'] = $user->ho_va_ten;
-            $noi_dung['link'] = "http://localhost:5173/client/dat-lai-mat-khau/" . $key;
+            $noi_dung['link'] = "http://localhost:5173/admin/dat-lai-mat-khau/" . $key;
 
             $user->hash_reset = $key;
             $user->save();

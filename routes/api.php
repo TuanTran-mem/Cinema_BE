@@ -28,6 +28,8 @@ use Illuminate\Support\Facades\Route;
 // =========================================================
 Route::post('/admin/dang-nhap', [NhanVienController::class, 'dangNhap']);
 Route::get('/admin/dang-xuat', [NhanVienController::class, 'dangXuat']);
+Route::post('/admin/quen-mat-khau', [NhanVienController::class, 'quenMatKhau']);
+Route::post('/admin/dat-lai-mat-khau', [NhanVienController::class, 'datLaiMatKhau']);
 Route::get('/admin/check-token', [NhanVienController::class, 'checkAdmin']);
 
 Route::prefix('admin')->group(function () {

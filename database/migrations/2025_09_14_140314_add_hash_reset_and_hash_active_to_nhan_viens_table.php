@@ -23,7 +23,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('nhan_viens', function (Blueprint $table) {
-            //
+            $table->dropColumn('hash_reset');
+            $table->dropColumn('hash_active');
         });
     }
 };
