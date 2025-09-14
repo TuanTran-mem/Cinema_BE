@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Hash;
 
 class KhachHangController extends Controller
 {
@@ -28,7 +29,7 @@ class KhachHangController extends Controller
             'ho_va_ten'     => $request->ho_va_ten,
             'email'         => $request->email,
             'so_dien_thoai' => $request->so_dien_thoai,
-            'password'      => '123456',
+            'password'      => bcrypt($request->password),
             'cccd'          => $request->cccd,
             'ngay_sinh'     => $request->ngay_sinh,
             'is_block'      => 0,
@@ -45,7 +46,7 @@ class KhachHangController extends Controller
             'ho_va_ten'     => $request->ho_va_ten,
             'email'         => $request->email,
             'so_dien_thoai' => $request->so_dien_thoai,
-            'password'      => $request->password,
+            'password'      => bcrypt($request->password),
             'cccd'          => $request->cccd,
             'ngay_sinh'     => $request->ngay_sinh,
             'is_block'      => $request->is_block,
@@ -91,28 +92,27 @@ class KhachHangController extends Controller
 
     public function dangNhap(Request $request)
     {
-        $check = KhachHang::where('email', $request->email)
-            ->where('password', $request->password)->first();
-        if ($check) {
-            if ($check->is_active == 0) {
-                return response()->json([
-                    'status' => 0,
-                    'message' => 'Tài khoản chưa được kích hoạt',
-                ]);
-            } else {
-                return response()->json([
-                    'status' => true,
-                    'message' => 'Đăng nhập thành công',
-                    'token' => $check->createToken('key_client')->plainTextToken,
-                ]);
-            }
+    $user = KhachHang::where('email', $request->email)->first();
+    if ($user && Hash::check($request->password, $user->password)) {
+        if ($user->is_active == 0) {
+            return response()->json([
+                'status' => 0,
+                'message' => 'Tài khoản chưa được kích hoạt',
+            ]);
         } else {
             return response()->json([
-                'status' => false,
-                'message' => 'Tài khoản sai email hoặc password',
+                'status' => true,
+                'message' => 'Đăng nhập thành công',
+                'token' => $user->createToken('key_client')->plainTextToken,
             ]);
         }
+    } else {
+        return response()->json([
+            'status' => false,
+            'message' => 'Tài khoản sai email hoặc password',
+        ]);
     }
+}
 
     public function checkClient()
     {
@@ -150,7 +150,7 @@ class KhachHangController extends Controller
             'ho_va_ten'     => $request->ho_va_ten,
             'email'         => $request->email,
             'so_dien_thoai' => $request->so_dien_thoai,
-            'password'      => $request->password,
+            'password'      => bcrypt($request->password),
             'cccd'          => $request->cccd,
             'ngay_sinh'     => $request->ngay_sinh,
             'is_block'      => 0,
@@ -210,7 +210,7 @@ class KhachHangController extends Controller
         }
 
         $user->update([
-            'password'      =>  $request->password,
+            'password'      =>  bcrypt($request->password),
             'hash_reset'    =>  null
         ]);
 
@@ -237,7 +237,7 @@ class KhachHangController extends Controller
         $user = Auth::guard('sanctum')->user();
         if ($user && $user instanceof \App\Models\KhachHang) {
 
-            if ($user->password != $request->password) {
+            if (!Hash::check($request->password, $user->password)) {
                 return response()->json([
                     'status'    =>  0,
                     'message'   =>  'Mật khẩu hiện tại không đúng. Vui lòng nhập lại.'
@@ -249,7 +249,7 @@ class KhachHangController extends Controller
                         'message'   =>  'Mật khẩu hiện mới và xác nhận không khớp. Vui lòng nhập lại.'
                     ]);
                 } else {
-                    $user->password = $request->new_password;
+                    $user->password = bcrypt($request->new_password);
                     $user->save();
 
                     return response()->json([

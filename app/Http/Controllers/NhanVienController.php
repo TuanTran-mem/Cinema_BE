@@ -10,12 +10,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx\Rels;
+use Illuminate\Support\Facades\Hash;
 
 class NhanVienController extends Controller
 {
     public function getData()
     {
-        $id_chuc_nang = 
+        $id_chuc_nang =
         $data = NhanVien::join('chuc_vus', 'chuc_vus.id', 'nhan_viens.id_chuc_vu')
             ->select('nhan_viens.*', 'chuc_vus.ten_chuc_vu')
             ->get();
@@ -30,8 +31,8 @@ class NhanVienController extends Controller
         NhanVien::create([
             'email'         => $request->email,
             'ho_va_ten'     => $request->ho_va_ten,
-            'password'      => $request->password,
-            're_password'   => $request->re_password,
+            'password'      => bcrypt($request->password),
+            're_password'   => bcrypt($request->re_password),
             'so_dien_thoai' => $request->so_dien_thoai,
             'dia_chi'       => $request->dia_chi,
             'ngay_sinh'     => $request->ngay_sinh,
@@ -47,20 +48,24 @@ class NhanVienController extends Controller
 
     public function update(Request $request)
     {
-        NhanVien::where('id', $request->id)->update([
-            'email'         => $request->email,
-            'ho_va_ten'     => $request->ho_va_ten,
-            'so_dien_thoai' => $request->so_dien_thoai,
-            'dia_chi'       => $request->dia_chi,
-            'ngay_sinh'     => $request->ngay_sinh,
-            'tinh_trang'    => $request->tinh_trang,
-            'id_chuc_vu'    => $request->id_chuc_vu
-        ]);
+        $updateData = [
+        'email'         => $request->email,
+        'ho_va_ten'     => $request->ho_va_ten,
+        'so_dien_thoai' => $request->so_dien_thoai,
+        'dia_chi'       => $request->dia_chi,
+        'ngay_sinh'     => $request->ngay_sinh,
+        'tinh_trang'    => $request->tinh_trang,
+        'id_chuc_vu'    => $request->id_chuc_vu
+    ];
+    if ($request->password) {
+        $updateData['password'] = bcrypt($request->password);
+    }
+    NhanVien::where('id', $request->id)->update($updateData);
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Cập nhật nhân viên ' . $request->ho_va_ten . ' thành công',
-        ]);
+    return response()->json([
+        'status' => true,
+        'message' => 'Cập nhật nhân viên ' . $request->ho_va_ten . ' thành công',
+    ]);
     }
 
     public function destroy(Request $request)
@@ -87,13 +92,13 @@ class NhanVienController extends Controller
 
     public function dangNhap(Request $request)
     {
-        $check = NhanVien::where('email', $request->email)
+        $user = NhanVien::where('email', $request->email)
             ->where('password', $request->password)->first();
-        if ($check) {
+        if ($user && Hash::check($request->password, $user->password)) {
             return response()->json([
                 'status' => true,
                 'message' => 'Đăng nhập thành công',
-                'token' => $check->createToken('key_admin')->plainTextToken
+                'token' => $user->createToken('key_admin')->plainTextToken
             ]);
         } else {
             return response()->json([
@@ -134,7 +139,7 @@ class NhanVienController extends Controller
         $user = Auth::guard('sanctum')->user();
         if ($user && $user instanceof \App\Models\NhanVien) {
 
-            if ($user->password != $request->password) {
+            if (!Hash::check($request->password, $user->password)) {
                 return response()->json([
                     'status'    =>  0,
                     'message'   =>  'Mật khẩu hiện tại không đúng. Vui lòng nhập lại.'
@@ -146,7 +151,7 @@ class NhanVienController extends Controller
                         'message'   =>  'Mật khẩu hiện mới và xác nhận không khớp. Vui lòng nhập lại.'
                     ]);
                 } else {
-                    $user->password = $request->new_password;
+                    $user->password = bcrypt($request->new_password);
                     $user->save();
 
                     return response()->json([
@@ -199,7 +204,7 @@ class NhanVienController extends Controller
         }
 
         $user->update([
-            'password'      =>  $request->password,
+            'password'      =>  bcrypt($request->password),
             'hash_reset'    =>  null
         ]);
 
